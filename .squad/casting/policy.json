@@ -1,0 +1,8 @@
+# Casting Policy
+
+{
+  "universes_allowed": ["heat"],
+  "active_universe": "heat",
+  "capacity_hard_limit": 5,
+  "overflow_handling": "diegetic"
+}

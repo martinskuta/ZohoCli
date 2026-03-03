@@ -1,0 +1,32 @@
+{
+  "agents": [
+    {
+      "persistent_name": "Keaton",
+      "universe": "heat",
+      "created_at": "2026-02-24T18:58:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Fenster",
+      "universe": "heat",
+      "created_at": "2026-02-24T18:58:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Hockney",
+      "universe": "heat",
+      "created_at": "2026-02-24T18:58:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Scribe",
+      "universe": "system",
+      "created_at": "2026-02-24T18:58:00Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  ]
+}
