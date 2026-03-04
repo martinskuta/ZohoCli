@@ -7,6 +7,7 @@ namespace ZohoCLI.Commands.Timelogs;
 public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDate, HttpClient httpClient, TokenStore tokenStore, OAuthService oauthService)
     : AuthenticatedCommand(httpClient, tokenStore, oauthService)
 {
+    private const string TimelogsEndpoint = "https://people.zoho.eu/people/api/timesheet/get-timelogs";
     private const int MaxPageSize = 200;
 
     protected override async Task ExecuteAuthenticated(CancellationToken cancellationToken)
@@ -52,7 +53,10 @@ public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDa
 
             foreach (var timelog in pageTimelogs)
             {
-                allTimelogs.Add(timelog?.DeepClone());
+                if (timelog != null)
+                {
+                    allTimelogs.Add(timelog.DeepClone());
+                }
             }
 
             if (pageTimelogs.Count < MaxPageSize)
@@ -85,6 +89,6 @@ public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDa
             parameters.Add($"toDate={UriFormatter.FormatDate(toDate.Value)}");
         }
 
-        return $"https://people.zoho.eu/people/api/timesheet/get-timelogs?{string.Join("&", parameters)}";
+        return $"{TimelogsEndpoint}?{string.Join("&", parameters)}";
     }
 }

@@ -105,6 +105,12 @@ Command ConfigureTimelogsCommands()
         var user = ctx.ParseResult.GetValueForOption(userOption);
         var fromDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), "fromDate");
         var toDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), "toDate");
+        if (fromDate.HasValue && toDate.HasValue && toDate.Value < fromDate.Value)
+        {
+            Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
+            Environment.Exit(1);
+            return Task.CompletedTask;
+        }
 
         return commandFactory.CreateTimelogsGetCommand(user, fromDate, toDate).Execute();
     });
