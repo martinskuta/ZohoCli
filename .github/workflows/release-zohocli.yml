@@ -43,6 +43,10 @@ jobs:
           $tagPrefix = "v$majorMinor."
           $maxPatch = -1
           foreach ($existingTag in @(git tag --list "$tagPrefix*")) {
+            if ($existingTag.Length -le $tagPrefix.Length) {
+              continue
+            }
+
             $patchText = $existingTag.Substring($tagPrefix.Length)
             if ($patchText -notmatch '^\d+$') {
               continue
