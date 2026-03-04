@@ -2,6 +2,7 @@ using ZohoCLI.Auth;
 using ZohoCLI.Commands.Auth;
 using ZohoCLI.Commands.Jobs;
 using ZohoCLI.Commands.Leave;
+using ZohoCLI.Commands.Timelogs;
 
 namespace ZohoCLI.Commands;
 
@@ -21,4 +22,7 @@ public class CommandFactory
     
     //LEAVE
     public LeaveGetAll CreateLeaveGetAllCommand(DateOnly fromDate, DateOnly toDate) => new(fromDate, toDate, _httpClient.Value, _tokenStore.Value, _oAuthService.Value);
+    
+    //TIMELOGS
+    public TimelogsGetCommand CreateTimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDate) => new(user, fromDate, toDate, _httpClient.Value, _tokenStore.Value, _oAuthService.Value);
 }
