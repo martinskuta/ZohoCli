@@ -108,7 +108,7 @@ Command ConfigureTimelogsCommands()
         if (fromDate.HasValue && toDate.HasValue && toDate.Value < fromDate.Value)
         {
             Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
-            Environment.Exit(1);
+            ctx.ExitCode = 1;
             return Task.CompletedTask;
         }
 
