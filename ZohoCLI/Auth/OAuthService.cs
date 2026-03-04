@@ -266,7 +266,7 @@ public class OAuthService
 
     public async Task<UserInfo> GetUserInfoAsync(OAuthToken token, CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{ZohoAuthEndpoint}/user/info");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://accounts.{ZohoEnv.Default.Domain}/oauth/user/info");
         request.Headers.Add("Authorization", "Zoho-oauthtoken " + token.AccessToken);
 
         var response = await _httpClient.SendAsync(request, cancellationToken);
