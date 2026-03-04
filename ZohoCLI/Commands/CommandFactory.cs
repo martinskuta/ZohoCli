@@ -25,4 +25,6 @@ public class CommandFactory
     
     //TIMELOGS
     public TimelogsGetCommand CreateTimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDate) => new(user, fromDate, toDate, _httpClient.Value, _tokenStore.Value, _oAuthService.Value);
+    public TimelogsAddCommand CreateTimelogsAddCommand(string? user, string jobId, DateOnly date, string dateFormat, decimal hours, string workItem, string description)
+        => new(user, jobId, date, dateFormat, hours, workItem, description, _httpClient.Value, _tokenStore.Value, _oAuthService.Value);
 }

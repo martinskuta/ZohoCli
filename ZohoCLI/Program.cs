@@ -1,6 +1,7 @@
 using System.CommandLine;
 using ZohoCLI;
 using ZohoCLI.Commands;
+using ZohoCLI.Commands.Timelogs;
 
 var commandFactory = new CommandFactory();
 var rootCommand = new RootCommand("Zoho People CLI - Manage timesheets and authentication")
@@ -82,6 +83,69 @@ Command ConfigureLeaveCommands()
 
 Command ConfigureTimelogsCommands()
 {
+    var timelogsCommand = new Command("timelogs", "Timesheet API related commands.");
+    var addCommand = new Command("add", "Add a timelog entry");
+
+    var userOption = new Option<string?>("--user", "User selector: all | ERECNO | Email-ID | Employee-ID. Defaults to authenticated user email.");
+    userOption.IsRequired = false;
+    userOption.AddAlias("-u");
+
+    var jobIdOption = new Option<string>("--jobId", "Job Id for which the timelog is added");
+    jobIdOption.IsRequired = true;
+    jobIdOption.AddAlias("-j");
+
+    var dateOption = new Option<string>("--date", $"Work date for timelog. Default format is {UriFormatter.DefaultDateFormat}");
+    dateOption.IsRequired = true;
+    dateOption.AddAlias("-d");
+
+    var dateFormatOption = new Option<string>("--dateFormat", "Date format used for --date");
+    dateFormatOption.IsRequired = false;
+    dateFormatOption.SetDefaultValue(UriFormatter.DefaultDateFormat);
+    dateFormatOption.AddAlias("-df");
+
+    var hoursOption = new Option<decimal>("--hours", "Hours for the timelog entry");
+    hoursOption.IsRequired = true;
+    hoursOption.AddAlias("-h");
+
+    var workItemOption = new Option<string>("--workItem", "Work item reference (e.g. ticket number)");
+    workItemOption.IsRequired = false;
+    workItemOption.SetDefaultValue(string.Empty);
+    workItemOption.AddAlias("-wi");
+
+    var descriptionOption = new Option<string>("--description", "Description/comment of work");
+    descriptionOption.IsRequired = false;
+    descriptionOption.SetDefaultValue(string.Empty);
+    descriptionOption.AddAlias("-c");
+
+    addCommand.AddOption(userOption);
+    addCommand.AddOption(jobIdOption);
+    addCommand.AddOption(dateOption);
+    addCommand.AddOption(dateFormatOption);
+    addCommand.AddOption(hoursOption);
+    addCommand.AddOption(workItemOption);
+    addCommand.AddOption(descriptionOption);
+
+    addCommand.SetHandler(ctx =>
+    {
+        var dateFormat = ctx.ParseResult.GetValueForOption(dateFormatOption)!;
+        var date = ParseDateOnly(ctx.ParseResult.GetValueForOption(dateOption)!, dateFormat);
+
+        return commandFactory.CreateTimelogsAddCommand(
+            ctx.ParseResult.GetValueForOption(userOption),
+            ctx.ParseResult.GetValueForOption(jobIdOption)!,
+            date,
+            dateFormat,
+            ctx.ParseResult.GetValueForOption(hoursOption),
+            ctx.ParseResult.GetValueForOption(workItemOption)!,
+            ctx.ParseResult.GetValueForOption(descriptionOption)!).Execute();
+    });
+
+    timelogsCommand.Add(addCommand);
+    return timelogsCommand;
+}
+
+Command ConfigureTimelogsCommands()
+{
     var timelogsCommand = new Command("timelogs", "Timelogs API related commands. Useful to get timelog records for a user");
     var getCommand = new Command("get", "Get timelogs for a user");
 
@@ -147,3 +211,4 @@ DateOnly? ParseOptionalDateOnly(string? date, string optionName)
     Environment.Exit(1);
     return default;
 }
+
