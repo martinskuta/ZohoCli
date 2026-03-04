@@ -3,9 +3,9 @@ name: Release ZohoCLI
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version (example: 1.2.3)"
-        required: true
+      tag:
+        description: "Release tag override (defaults to v<computed version>)"
+        required: false
         type: string
 
 permissions:
@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -26,18 +27,46 @@ jobs:
       - name: Resolve release version
         id: version
         shell: pwsh
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          $version = "${{ github.event.inputs.version }}".Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z\.-]+)?(\+[0-9A-Za-z\.-]+)?$') {
-            Write-Error "Version must be semver-like (for example: 1.2.3 or 1.2.3-beta.1)."
-            exit 1
+          $versionFile = ".release-version"
+          if (-not (Test-Path $versionFile)) {
+            throw "Version file '$versionFile' was not found."
           }
 
-          $baseVersion = ($version -split '[-+]')[0]
-          $assemblyVersion = "$baseVersion.0"
+          $majorMinor = (Get-Content -Path $versionFile -Raw).Trim()
+          if ($majorMinor -notmatch '^\d+\.\d+$') {
+            throw "Version file '$versionFile' must contain Major.Minor (for example 1.2)."
+          }
+
+          $tagPrefix = "v$majorMinor."
+          $maxPatch = -1
+          foreach ($existingTag in @(git tag --list "$tagPrefix*")) {
+            if (-not $existingTag.StartsWith($tagPrefix)) {
+              continue
+            }
+
+            $patchText = $existingTag.Substring($tagPrefix.Length)
+            if ($patchText -notmatch '^\d+$') {
+              continue
+            }
+
+            $patchCandidate = [int]$patchText
+            if ($patchCandidate -gt $maxPatch) {
+              $maxPatch = $patchCandidate
+            }
+          }
+
+          $version = "$majorMinor.$($maxPatch + 1)"
+          $assemblyVersion = "$version.0"
+          $tag = $env:INPUT_TAG
+          if ($null -eq $tag -or $tag.Trim().Length -eq 0) {
+            $tag = "v$version"
+          }
 
           "version=$version" >> $env:GITHUB_OUTPUT
-          "tag=v$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
           "assembly_version=$assemblyVersion" >> $env:GITHUB_OUTPUT
 
       - name: Publish AOT executable
