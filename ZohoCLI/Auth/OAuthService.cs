@@ -9,8 +9,7 @@ namespace ZohoCLI.Auth;
 
 public class OAuthService
 {
-    private const string ZohoAuthEndpoint = "https://accounts.zoho.eu/oauth/v2/auth";
-    private const string ZohoTokenEndpoint = "https://accounts.zoho.eu/oauth/v2/token";
+    private static readonly string ZohoAuthEndpoint = $"https://accounts.{ZohoEnv.Default.Domain}/oauth/v2";
     private const string RedirectUri = "http://localhost:8080/callback";
 
     private const string ClientId = "1000.YNFJBIDBFBB9OPHLI4EIHUQZACWG1Q";
@@ -64,7 +63,7 @@ public class OAuthService
         var queryString = string.Join("&", parameters.Select(p =>
             $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
 
-        return $"{ZohoAuthEndpoint}?{queryString}";
+        return $"{ZohoAuthEndpoint}/auth?{queryString}";
     }
 
     private static string Base64UrlEncode(byte[] bytes)
@@ -212,7 +211,7 @@ public class OAuthService
         };
 
         using var content = new FormUrlEncodedContent(tokenRequest);
-        var response = await _httpClient.PostAsync(ZohoTokenEndpoint, content, cancellationToken);
+        var response = await _httpClient.PostAsync($"{ZohoAuthEndpoint}/token", content, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -238,7 +237,7 @@ public class OAuthService
         };
 
         using var content = new FormUrlEncodedContent(tokenRequest);
-        var response = await _httpClient.PostAsync(ZohoTokenEndpoint, content, cancellationToken);
+        var response = await _httpClient.PostAsync($"{ZohoAuthEndpoint}/token", content, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -255,7 +254,7 @@ public class OAuthService
 
     public async Task RevokeRefreshTokenAsync(OAuthToken token, CancellationToken cancellationToken = default)
     {
-        var url = $"{ZohoTokenEndpoint}/revoke?token={Uri.EscapeDataString(token.RefreshToken)}";
+        var url = $"{ZohoAuthEndpoint}/token/revoke?token={Uri.EscapeDataString(token.RefreshToken)}";
         var response = await _httpClient.PostAsync(url, null, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -267,7 +266,7 @@ public class OAuthService
 
     public async Task<UserInfo> GetUserInfoAsync(OAuthToken token, CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "https://accounts.zoho.eu/oauth/user/info");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{ZohoAuthEndpoint}/user/info");
         request.Headers.Add("Authorization", "Zoho-oauthtoken " + token.AccessToken);
 
         var response = await _httpClient.SendAsync(request, cancellationToken);

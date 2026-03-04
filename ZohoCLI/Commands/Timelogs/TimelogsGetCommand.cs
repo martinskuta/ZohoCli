@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using System.Security.Authentication;
 using ZohoCLI.Auth;
 
 namespace ZohoCLI.Commands.Timelogs;
@@ -13,8 +12,8 @@ public class TimelogsGetCommand(
     OAuthService oauthService)
     : AuthenticatedCommand(httpClient, tokenStore, oauthService)
 {
-    private const string TimelogsEndpoint = "https://people.zoho.eu/people/api/timetracker/gettimelogs";
-    private const int MaxPageSize = 200;
+    private readonly string _timelogsEndpoint = $"https://people.{ZohoEnv.Default.Domain}/people/api/timetracker/gettimelogs";
+    private readonly int _maxPageSize = 200;
 
     protected override async Task ExecuteAuthenticated(CancellationToken cancellationToken)
     {
@@ -50,12 +49,12 @@ public class TimelogsGetCommand(
                     }
                 }
 
-                if (pageTimelogs.Count < MaxPageSize)
+                if (pageTimelogs.Count < _maxPageSize)
                 {
                     break;
                 }
 
-                startIndex += MaxPageSize;
+                startIndex += _maxPageSize;
             }
             
             var nextMonth = currentFromDate.Month == 12 ? 1 : currentFromDate.Month + 1;
@@ -76,18 +75,18 @@ public class TimelogsGetCommand(
         return nextToDate < toDate ? nextToDate : toDate;
     }
 
-    private string BuildRequestUri(string selectedUser, DateOnly fromDate, DateOnly toDate, int startIndex)
+    private string BuildRequestUri(string selectedUser, DateOnly currentFromDate, DateOnly currentToDate, int startIndex)
     {
         var parameters = new List<string>
         {
             $"user={UriFormatter.FormatString(selectedUser)}",
-            $"limit={MaxPageSize}",
+            $"limit={_maxPageSize}",
             $"sIndex={startIndex}",
             $"dateFormat={UriFormatter.DefaultDateFormat}",
-            $"fromDate={UriFormatter.FormatDate(fromDate)}",
-            $"toDate={UriFormatter.FormatDate(toDate)}"
+            $"fromDate={UriFormatter.FormatDate(currentFromDate)}",
+            $"toDate={UriFormatter.FormatDate(currentToDate)}"
         };
 
-        return $"{TimelogsEndpoint}?{string.Join("&", parameters)}";
+        return $"{_timelogsEndpoint}?{string.Join("&", parameters)}";
     }
 }

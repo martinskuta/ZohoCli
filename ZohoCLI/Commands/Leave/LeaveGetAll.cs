@@ -12,7 +12,7 @@ public class LeaveGetAll(DateOnly fromDate, DateOnly toDate, HttpClient httpClie
         var userEmail = await GetUserEmailAsync(cancellationToken);
         
         using var holidayRequest = new HttpRequestMessage(HttpMethod.Get,
-            $"https://people.zoho.eu/people/api/leave/v2/holidays/get?employee={UriFormatter.FormatString(userEmail)}&from={UriFormatter.FormatDate(fromDate)}&to={UriFormatter.FormatDate(toDate)}&dateFormat={UriFormatter.FormattedDefaultDateFormat}");
+            $"https://people.{ZohoEnv.Default.Domain}/people/api/leave/v2/holidays/get?employee={UriFormatter.FormatString(userEmail)}&from={UriFormatter.FormatDate(fromDate)}&to={UriFormatter.FormatDate(toDate)}&dateFormat={UriFormatter.FormattedDefaultDateFormat}");
         var holidayResponse = await SendAuthenticatedAsync(holidayRequest, cancellationToken);
         if (!holidayResponse.IsSuccessStatusCode)
         {
@@ -23,7 +23,7 @@ public class LeaveGetAll(DateOnly fromDate, DateOnly toDate, HttpClient httpClie
         
         var userId = await GetUserIdAsync(cancellationToken);
         using var leaveRequest = new HttpRequestMessage(HttpMethod.Get,
-            $"https://people.zoho.eu/people/api/v2/leavetracker/leaves/records?employee={UriFormatter.FormatString($"[{userId}]")}&from={UriFormatter.FormatDate(fromDate)}&to={UriFormatter.FormatDate(toDate)}&dateFormat={UriFormatter.FormattedDefaultDateFormat}");
+            $"https://people.{ZohoEnv.Default.Domain}/people/api/v2/leavetracker/leaves/records?employee={UriFormatter.FormatString($"[{userId}]")}&from={UriFormatter.FormatDate(fromDate)}&to={UriFormatter.FormatDate(toDate)}&dateFormat={UriFormatter.FormattedDefaultDateFormat}");
 
         var leaveResponse = await SendAuthenticatedAsync(leaveRequest, cancellationToken);
         if (!leaveResponse.IsSuccessStatusCode)

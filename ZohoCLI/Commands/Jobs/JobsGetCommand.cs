@@ -74,7 +74,7 @@ public class JobsGetCommand(HttpClient httpClient, TokenStore tokenStore, OAuthS
         var activeJobs = new Dictionary<string, JobInfo>();
 
         using var request = new HttpRequestMessage(HttpMethod.Get,
-            "https://people.zoho.eu/people/api/timetracker/getjobs?assignedTo=all&limit=200");
+            $"https://people.{ZohoEnv.Default.Domain}/people/api/timetracker/getjobs?assignedTo=all&limit=200");
 
         var response = await SendAuthenticatedAsync(request, cancellationToken);
         

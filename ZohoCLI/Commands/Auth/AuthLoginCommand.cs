@@ -31,7 +31,7 @@ public class AuthLoginCommand(HttpClient httpClient, TokenStore tokenStore, OAut
             await _tokenStore.SaveTokenAsync(token);
 
             using var userRequest = new HttpRequestMessage(HttpMethod.Get,
-                $"https://people.zoho.eu/api/forms/P_EmployeeView/records?searchColumn=EMPLOYEEMAILALIAS&searchValue={UriFormatter.FormatString(token.UserEmail)}");
+                $"https://people.{ZohoEnv.Default.Domain}/api/forms/P_EmployeeView/records?searchColumn=EMPLOYEEMAILALIAS&searchValue={UriFormatter.FormatString(token.UserEmail)}");
 
             var userResponse = await SendAuthenticatedAsync(userRequest, cancellationToken);
 
