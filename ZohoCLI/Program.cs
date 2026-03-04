@@ -2,6 +2,11 @@ using System.CommandLine;
 using ZohoCLI;
 using ZohoCLI.Commands;
 
+var now = DateTime.Now;
+var firstDay = new DateOnly(now.Year, now.Month, 1);
+var lastDay = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month));
+
+
 var commandFactory = new CommandFactory();
 var rootCommand = new RootCommand("Zoho People CLI - Manage timesheets and authentication")
 {
@@ -50,11 +55,11 @@ Command ConfigureLeaveCommands()
 
     var getAllCommand = new Command("all", "Get all leave and holiday details for the authenticated user");
     var fromDateOption = new Option<string>("--fromDate", $"From date to get leave details from (inclusive). Default format is {UriFormatter.DefaultDateFormat}");
-    fromDateOption.IsRequired = true;
+    fromDateOption.SetDefaultValue(firstDay.ToString(UriFormatter.DefaultDateFormat));
     fromDateOption.AddAlias("-f");
     
     var toDateOption = new Option<string>("--toDate", $"To date to get leave details to (inclusive). Default format is {UriFormatter.DefaultDateFormat}");
-    toDateOption.IsRequired = true;
+    toDateOption.SetDefaultValue(lastDay.ToString(UriFormatter.DefaultDateFormat));
     toDateOption.AddAlias("-t");
     
     var dateFormatOption = new Option<string>("--dateFormat", "Date format to use for dates in the output");
@@ -68,8 +73,14 @@ Command ConfigureLeaveCommands()
     getAllCommand.SetHandler(ctx =>
     {
         var dateFormat = ctx.ParseResult.GetValueForOption(dateFormatOption)!;
-        var fromDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption)!, dateFormat);
-        var toDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(toDateOption)!, dateFormat);
+        var fromDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), dateFormat);
+        var toDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), dateFormat);
+        if (toDate < fromDate)
+        {
+            Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
+            ctx.ExitCode = 1;
+            return Task.CompletedTask;
+        }
 
         return commandFactory.CreateLeaveGetAllCommand(fromDate, toDate).Execute();
     });
@@ -88,13 +99,15 @@ Command ConfigureTimelogsCommands()
     var userOption = new Option<string?>("--user", "User to get timelogs for (all | ERECNO | Email-ID | Employee-ID). Defaults to authenticated user email-id");
     userOption.IsRequired = false;
     userOption.AddAlias("-u");
-
-    var fromDateOption = new Option<string?>("--fromDate", $"From date to get timelogs from (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
+    
+    var fromDateOption = new Option<string>("--fromDate", $"From date to get timelogs from (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
     fromDateOption.IsRequired = false;
+    fromDateOption.SetDefaultValue(firstDay.ToString(UriFormatter.DefaultDateFormat));
     fromDateOption.AddAlias("-f");
 
-    var toDateOption = new Option<string?>("--toDate", $"To date to get timelogs to (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
+    var toDateOption = new Option<string>("--toDate", $"To date to get timelogs to (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
     toDateOption.IsRequired = false;
+    toDateOption.SetDefaultValue(lastDay.ToString(UriFormatter.DefaultDateFormat));
     toDateOption.AddAlias("-t");
 
     getCommand.AddOption(userOption);
@@ -103,9 +116,9 @@ Command ConfigureTimelogsCommands()
     getCommand.SetHandler(ctx =>
     {
         var user = ctx.ParseResult.GetValueForOption(userOption);
-        var fromDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), "fromDate");
-        var toDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), "toDate");
-        if (fromDate.HasValue && toDate.HasValue && toDate.Value < fromDate.Value)
+        var fromDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), UriFormatter.DefaultDateFormat);
+        var toDate = ParseDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), UriFormatter.DefaultDateFormat);
+        if (toDate < fromDate)
         {
             Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
             ctx.ExitCode = 1;
@@ -114,12 +127,64 @@ Command ConfigureTimelogsCommands()
 
         return commandFactory.CreateTimelogsGetCommand(user, fromDate, toDate).Execute();
     });
-
     timelogsCommand.Add(getCommand);
+    
+    var addCommand = new Command("add", "Add a timelog entry");
+
+    var jobIdOption = new Option<string>("--jobId", "Job Id for which the timelog is added");
+    jobIdOption.IsRequired = true;
+    jobIdOption.AddAlias("-j");
+
+    var dateOption = new Option<string>("--date", $"Work date for timelog. Default format is {UriFormatter.DefaultDateFormat}");
+    dateOption.IsRequired = true;
+    dateOption.AddAlias("-d");
+
+    var dateFormatOption = new Option<string>("--dateFormat", "Date format used for --date");
+    dateFormatOption.IsRequired = false;
+    dateFormatOption.SetDefaultValue(UriFormatter.DefaultDateFormat);
+    dateFormatOption.AddAlias("-df");
+
+    var hoursOption = new Option<decimal>("--hours", "Hours for the timelog entry");
+    hoursOption.IsRequired = true;
+    hoursOption.AddAlias("-h");
+
+    var workItemOption = new Option<string>("--workItem", "Work item reference (e.g. ticket number)");
+    workItemOption.IsRequired = false;
+    workItemOption.SetDefaultValue(string.Empty);
+    workItemOption.AddAlias("-wi");
+
+    var descriptionOption = new Option<string>("--description", "Description/comment of work");
+    descriptionOption.IsRequired = false;
+    descriptionOption.SetDefaultValue(string.Empty);
+    descriptionOption.AddAlias("-c");
+
+    addCommand.AddOption(userOption);
+    addCommand.AddOption(jobIdOption);
+    addCommand.AddOption(dateOption);
+    addCommand.AddOption(dateFormatOption);
+    addCommand.AddOption(hoursOption);
+    addCommand.AddOption(workItemOption);
+    addCommand.AddOption(descriptionOption);
+
+    addCommand.SetHandler(ctx =>
+    {
+        var dateFormat = ctx.ParseResult.GetValueForOption(dateFormatOption)!;
+        var date = ParseDateOnly(ctx.ParseResult.GetValueForOption(dateOption)!, dateFormat);
+
+        return commandFactory.CreateTimelogsAddCommand(
+            ctx.ParseResult.GetValueForOption(userOption),
+            ctx.ParseResult.GetValueForOption(jobIdOption)!,
+            date,
+            dateFormat,
+            ctx.ParseResult.GetValueForOption(hoursOption),
+            ctx.ParseResult.GetValueForOption(workItemOption)!,
+            ctx.ParseResult.GetValueForOption(descriptionOption)!).Execute();
+    });
+    
     return timelogsCommand;
 }
 
-DateOnly ParseDateOnly(string date, string dateFormat)
+DateOnly ParseDateOnly(string? date, string dateFormat)
 {
     if(DateOnly.TryParseExact(date, dateFormat, out var parsedDate))
     {
@@ -127,23 +192,6 @@ DateOnly ParseDateOnly(string date, string dateFormat)
     }
     
     Console.Error.WriteLine($"Parse exception. Date {date} doesn't match the expected date format {dateFormat}.");
-    Environment.Exit(1);
-    return default;
-}
-
-DateOnly? ParseOptionalDateOnly(string? date, string optionName)
-{
-    if (string.IsNullOrWhiteSpace(date))
-    {
-        return null;
-    }
-
-    if (DateOnly.TryParseExact(date, UriFormatter.DefaultDateFormat, out var parsedDate))
-    {
-        return parsedDate;
-    }
-
-    Console.Error.WriteLine($"Parse exception. {optionName} value {date} doesn't match the expected date format {UriFormatter.DefaultDateFormat}.");
     Environment.Exit(1);
     return default;
 }
