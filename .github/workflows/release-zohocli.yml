@@ -43,10 +43,6 @@ jobs:
           $tagPrefix = "v$majorMinor."
           $maxPatch = -1
           foreach ($existingTag in @(git tag --list "$tagPrefix*")) {
-            if (-not $existingTag.StartsWith($tagPrefix)) {
-              continue
-            }
-
             $patchText = $existingTag.Substring($tagPrefix.Length)
             if ($patchText -notmatch '^\d+$') {
               continue
@@ -61,7 +57,7 @@ jobs:
           $version = "$majorMinor.$($maxPatch + 1)"
           $assemblyVersion = "$version.0"
           $tag = $env:INPUT_TAG
-          if ($null -eq $tag -or $tag.Trim().Length -eq 0) {
+          if ([string]::IsNullOrWhiteSpace($tag)) {
             $tag = "v$version"
           }
 
