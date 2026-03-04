@@ -9,7 +9,7 @@ namespace ZohoCLI.Auth;
 
 public class OAuthService
 {
-    private const string ZohoAuthEndpoint = "https://accounts.zoho.com/oauth/v2/auth";
+    private const string ZohoAuthEndpoint = "https://accounts.zoho.eu/oauth/v2/auth";
     private const string ZohoTokenEndpoint = "https://accounts.zoho.eu/oauth/v2/token";
     private const string RedirectUri = "http://localhost:8080/callback";
 
@@ -224,7 +224,7 @@ public class OAuthService
         var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
         var token = JsonSerializer.Deserialize<OAuthToken>(jsonContent, OAuthTokenJsonContext.Default.OAuthToken)
                     ?? throw new InvalidOperationException("Failed to deserialize token response");
-
+        
         return token;
     }
 

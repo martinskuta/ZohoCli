@@ -77,17 +77,8 @@ public class JobsGetCommand(HttpClient httpClient, TokenStore tokenStore, OAuthS
             "https://people.zoho.eu/people/api/timetracker/getjobs?assignedTo=all&limit=200");
 
         var response = await SendAuthenticatedAsync(request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            await Console.Error.WriteLineAsync(
-                $"Failed to get jobs for: {response.StatusCode} - {errorContent}");
-            Environment.Exit(1);
-        }
-
-        await using var content = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var jobsContentNode = await JsonNode.ParseAsync(content, cancellationToken: cancellationToken);
+        
+        var jobsContentNode = await response.GetJsonResponse(cancellationToken);
 
         foreach (var jobNode in jobsContentNode?["response"]?["result"]?.AsArray() ?? [])
         {

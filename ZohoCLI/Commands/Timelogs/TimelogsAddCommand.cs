@@ -35,14 +35,10 @@ public class TimelogsAddCommand(
         request.Content = new FormUrlEncodedContent(parameters);
         
         var response = await SendAuthenticatedAsync(request, cancellationToken);
+        var jsonResponse = await response.GetJsonResponse(cancellationToken);
+        
+        var timelogId = jsonResponse?["response"]?["result"]?[0]?["timeLogId"]?.ToString();
 
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            await Console.Error.WriteLineAsync($"Failed to add timelog entry: {response.StatusCode} - {content}");
-            Environment.Exit(1);
-        }
-
-        await Console.Out.WriteLineAsync(content);
+        await Console.Out.WriteLineAsync($"Timelog entry {timelogId} added successfully");
     }
 }

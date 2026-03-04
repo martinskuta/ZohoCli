@@ -4,7 +4,13 @@ using ZohoCLI.Auth;
 
 namespace ZohoCLI.Commands.Timelogs;
 
-public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDate, HttpClient httpClient, TokenStore tokenStore, OAuthService oauthService)
+public class TimelogsGetCommand(
+    string? user,
+    DateOnly fromDate,
+    DateOnly toDate,
+    HttpClient httpClient,
+    TokenStore tokenStore,
+    OAuthService oauthService)
     : AuthenticatedCommand(httpClient, tokenStore, oauthService)
 {
     private const string TimelogsEndpoint = "https://people.zoho.eu/people/api/timetracker/gettimelogs";
@@ -15,65 +21,72 @@ public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDa
         var effectiveUser = string.IsNullOrWhiteSpace(user) ? await GetUserEmailAsync(cancellationToken) : user;
 
         var allTimelogs = new JsonArray();
-        var startIndex = 0;
+        
+        var currentFromDate = fromDate;
+        var currentToDate = GetNextToDate(currentFromDate);
 
-        while (true)
+        //Zoho allows to get timelogs only for maximum of 1 month, so we need to split the request into multiple requests if the time range is longer than 1 month
+        do
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildRequestUri(effectiveUser, startIndex));
-            var response = await SendAuthenticatedAsync(request, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            var startIndex = 0;
+            
+            while (true) //Then each month response is paginated into 200 timelogs, so we iterate all pages here
             {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                await Console.Error.WriteLineAsync($"Failed to get timelogs for user '{effectiveUser}': {response.StatusCode} - {errorContent}");
-                Environment.Exit(1);
-            }
+                using var request = new HttpRequestMessage(HttpMethod.Get, BuildRequestUri(effectiveUser, currentFromDate, currentToDate, startIndex));
+                var response = await SendAuthenticatedAsync(request, cancellationToken);
 
-            await using var content = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var timelogsResponse = await JsonNode.ParseAsync(content, cancellationToken: cancellationToken);
-            var pageTimelogs = timelogsResponse?["response"]?["result"]?.AsArray();
-            if (pageTimelogs == null || pageTimelogs.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var timelog in pageTimelogs)
-            {
-                if (timelog != null)
+                var jsonResponse = await response.GetJsonResponse(cancellationToken);
+                var pageTimelogs = jsonResponse?["response"]?["result"]?.AsArray();
+                if (pageTimelogs == null || pageTimelogs.Count == 0)
                 {
-                    allTimelogs.Add(timelog.DeepClone());
+                    break;
                 }
-            }
 
-            if (pageTimelogs.Count < MaxPageSize)
-            {
-                break;
-            }
+                foreach (var timelog in pageTimelogs)
+                {
+                    if (timelog != null)
+                    {
+                        allTimelogs.Add(timelog.DeepClone());
+                    }
+                }
 
-            startIndex += MaxPageSize;
-        }
+                if (pageTimelogs.Count < MaxPageSize)
+                {
+                    break;
+                }
+
+                startIndex += MaxPageSize;
+            }
+            
+            var nextMonth = currentFromDate.Month == 12 ? 1 : currentFromDate.Month + 1;
+            var nextYear = nextMonth == 1 ? currentFromDate.Year + 1 : currentFromDate.Year;
+            
+            currentFromDate = new DateOnly(nextYear, nextMonth, 1);
+            currentToDate = GetNextToDate(currentFromDate);
+            
+        } while (currentFromDate < toDate && currentToDate <= toDate);
 
         Console.WriteLine(allTimelogs.ToJsonString());
     }
 
-    private string BuildRequestUri(string selectedUser, int startIndex)
+    private DateOnly GetNextToDate(DateOnly currentFromDate)
+    {
+        var nextToDate = new DateOnly(currentFromDate.Year, currentFromDate.Month,
+            DateTime.DaysInMonth(currentFromDate.Year, currentFromDate.Month));
+        return nextToDate < toDate ? nextToDate : toDate;
+    }
+
+    private string BuildRequestUri(string selectedUser, DateOnly fromDate, DateOnly toDate, int startIndex)
     {
         var parameters = new List<string>
         {
             $"user={UriFormatter.FormatString(selectedUser)}",
             $"limit={MaxPageSize}",
-            $"sIndex={startIndex}"
+            $"sIndex={startIndex}",
+            $"dateFormat={UriFormatter.DefaultDateFormat}",
+            $"fromDate={UriFormatter.FormatDate(fromDate)}",
+            $"toDate={UriFormatter.FormatDate(toDate)}"
         };
-
-        if (fromDate.HasValue)
-        {
-            parameters.Add($"fromDate={UriFormatter.FormatDate(fromDate.Value)}");
-        }
-
-        if (toDate.HasValue)
-        {
-            parameters.Add($"toDate={UriFormatter.FormatDate(toDate.Value)}");
-        }
 
         return $"{TimelogsEndpoint}?{string.Join("&", parameters)}";
     }
