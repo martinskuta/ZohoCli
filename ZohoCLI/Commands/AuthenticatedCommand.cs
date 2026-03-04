@@ -37,7 +37,7 @@ public abstract class AuthenticatedCommand(HttpClient httpClient, TokenStore tok
         CancellationToken cancellationToken = default)
     {
         var token = await GetTokenAsync(cancellationToken);
-        request.Headers.Add("Authorization", "Zoho-oauthtoken " + Uri.EscapeDataString(token.AccessToken));
+        request.Headers.Add("Authorization", "Zoho-oauthtoken " + token.AccessToken);
         
         return await httpClient.SendAsync(request, cancellationToken);
     }
