@@ -31,10 +31,9 @@ public class TimelogsAddCommand(
             ["description"] = description
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://people.zoho.eu/people/api/timesheet/addtimelogs")
-        {
-            Content = new FormUrlEncodedContent(parameters)
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://people.zoho.eu/people/api/timetracker/addtimelog");
+        request.Content = new FormUrlEncodedContent(parameters);
+        
         var response = await SendAuthenticatedAsync(request, cancellationToken);
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);

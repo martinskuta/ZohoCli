@@ -83,12 +83,41 @@ Command ConfigureLeaveCommands()
 
 Command ConfigureTimelogsCommands()
 {
-    var timelogsCommand = new Command("timelogs", "Timesheet API related commands.");
-    var addCommand = new Command("add", "Add a timelog entry");
+    var timelogsCommand = new Command("timelogs", "Timelogs API related commands. Useful to get timelog records for a user");
+    var getCommand = new Command("get", "Get timelogs for a user");
 
-    var userOption = new Option<string?>("--user", "User selector: all | ERECNO | Email-ID | Employee-ID. Defaults to authenticated user email.");
+    var userOption = new Option<string?>("--user", "User to get timelogs for (all | ERECNO | Email-ID | Employee-ID). Defaults to authenticated user email-id");
     userOption.IsRequired = false;
     userOption.AddAlias("-u");
+
+    var fromDateOption = new Option<string?>("--fromDate", $"From date to get timelogs from (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
+    fromDateOption.IsRequired = false;
+    fromDateOption.AddAlias("-f");
+
+    var toDateOption = new Option<string?>("--toDate", $"To date to get timelogs to (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
+    toDateOption.IsRequired = false;
+    toDateOption.AddAlias("-t");
+
+    getCommand.AddOption(userOption);
+    getCommand.AddOption(fromDateOption);
+    getCommand.AddOption(toDateOption);
+    getCommand.SetHandler(ctx =>
+    {
+        var user = ctx.ParseResult.GetValueForOption(userOption);
+        var fromDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), "fromDate");
+        var toDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), "toDate");
+        if (fromDate.HasValue && toDate.HasValue && toDate.Value < fromDate.Value)
+        {
+            Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
+            ctx.ExitCode = 1;
+            return Task.CompletedTask;
+        }
+
+        return commandFactory.CreateTimelogsGetCommand(user, fromDate, toDate).Execute();
+    });
+    timelogsCommand.Add(getCommand);
+    
+    var addCommand = new Command("add", "Add a timelog entry");
 
     var jobIdOption = new Option<string>("--jobId", "Job Id for which the timelog is added");
     jobIdOption.IsRequired = true;
@@ -139,47 +168,7 @@ Command ConfigureTimelogsCommands()
             ctx.ParseResult.GetValueForOption(workItemOption)!,
             ctx.ParseResult.GetValueForOption(descriptionOption)!).Execute();
     });
-
-    timelogsCommand.Add(addCommand);
-    return timelogsCommand;
-}
-
-Command ConfigureTimelogsCommands()
-{
-    var timelogsCommand = new Command("timelogs", "Timelogs API related commands. Useful to get timelog records for a user");
-    var getCommand = new Command("get", "Get timelogs for a user");
-
-    var userOption = new Option<string?>("--user", "User to get timelogs for (all | ERECNO | Email-ID | Employee-ID). Defaults to authenticated user email-id");
-    userOption.IsRequired = false;
-    userOption.AddAlias("-u");
-
-    var fromDateOption = new Option<string?>("--fromDate", $"From date to get timelogs from (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
-    fromDateOption.IsRequired = false;
-    fromDateOption.AddAlias("-f");
-
-    var toDateOption = new Option<string?>("--toDate", $"To date to get timelogs to (inclusive). Expected format is {UriFormatter.DefaultDateFormat}");
-    toDateOption.IsRequired = false;
-    toDateOption.AddAlias("-t");
-
-    getCommand.AddOption(userOption);
-    getCommand.AddOption(fromDateOption);
-    getCommand.AddOption(toDateOption);
-    getCommand.SetHandler(ctx =>
-    {
-        var user = ctx.ParseResult.GetValueForOption(userOption);
-        var fromDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(fromDateOption), "fromDate");
-        var toDate = ParseOptionalDateOnly(ctx.ParseResult.GetValueForOption(toDateOption), "toDate");
-        if (fromDate.HasValue && toDate.HasValue && toDate.Value < fromDate.Value)
-        {
-            Console.Error.WriteLine($"Invalid date range. toDate ({toDate}) must be greater than or equal to fromDate ({fromDate}).");
-            ctx.ExitCode = 1;
-            return Task.CompletedTask;
-        }
-
-        return commandFactory.CreateTimelogsGetCommand(user, fromDate, toDate).Execute();
-    });
-
-    timelogsCommand.Add(getCommand);
+    
     return timelogsCommand;
 }
 

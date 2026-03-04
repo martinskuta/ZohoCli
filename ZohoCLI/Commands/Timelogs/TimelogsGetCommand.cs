@@ -7,39 +7,25 @@ namespace ZohoCLI.Commands.Timelogs;
 public class TimelogsGetCommand(string? user, DateOnly? fromDate, DateOnly? toDate, HttpClient httpClient, TokenStore tokenStore, OAuthService oauthService)
     : AuthenticatedCommand(httpClient, tokenStore, oauthService)
 {
-    private const string TimelogsEndpoint = "https://people.zoho.eu/people/api/timesheet/get-timelogs";
+    private const string TimelogsEndpoint = "https://people.zoho.eu/people/api/timetracker/gettimelogs";
     private const int MaxPageSize = 200;
 
     protected override async Task ExecuteAuthenticated(CancellationToken cancellationToken)
     {
-        var selectedUser = user;
-        if (string.IsNullOrWhiteSpace(selectedUser))
-        {
-            try
-            {
-                selectedUser = await GetUserEmailAsync(cancellationToken);
-            }
-            catch (AuthenticationException)
-            {
-                await Console.Error.WriteLineAsync("⛔ User not authenticated! Use 'auth login' command to authenticate first.");
-                Environment.Exit(1);
-                return;
-            }
-        }
+        var effectiveUser = string.IsNullOrWhiteSpace(user) ? await GetUserEmailAsync(cancellationToken) : user;
 
         var allTimelogs = new JsonArray();
         var startIndex = 0;
 
         while (true)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get,
-                BuildRequestUri(selectedUser, startIndex));
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildRequestUri(effectiveUser, startIndex));
             var response = await SendAuthenticatedAsync(request, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                await Console.Error.WriteLineAsync($"Failed to get timelogs for user '{selectedUser}': {response.StatusCode} - {errorContent}");
+                await Console.Error.WriteLineAsync($"Failed to get timelogs for user '{effectiveUser}': {response.StatusCode} - {errorContent}");
                 Environment.Exit(1);
             }
 
