@@ -31,8 +31,10 @@ public class TimelogsAddCommand(
             ["description"] = description
         };
 
-        var queryString = string.Join("&", parameters.Select(x => $"{UriFormatter.FormatString(x.Key)}={UriFormatter.FormatString(x.Value)}"));
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"https://people.zoho.eu/people/api/timesheet/addtimelogs?{queryString}");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://people.zoho.eu/people/api/timesheet/addtimelogs")
+        {
+            Content = new FormUrlEncodedContent(parameters)
+        };
         var response = await SendAuthenticatedAsync(request, cancellationToken);
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
