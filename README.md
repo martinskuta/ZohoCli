@@ -6,7 +6,7 @@ A small command line tool that reads Zoho People data as JSON: the signed-in per
 
 `zoho` is a .NET global tool: it needs the .NET 10 SDK, and installing it puts `zoho` in `~/.dotnet/tools`, which is on `PATH`.
 
-**From a release:** download `Zoho.Cli.<version>.nupkg` from the [releases](https://github.com/martinskuta/zohocli/releases) into a folder of its own, such as `~/Downloads/zoho`, then:
+**From a release:** download `Zoho.Cli.<version>.nupkg` from the [releases](https://github.com/martinskuta/ZohoCli/releases) into a folder of its own, such as `~/Downloads/zoho`, then:
 
 ```powershell
 dotnet tool install -g Zoho.Cli --source ~/Downloads/zoho

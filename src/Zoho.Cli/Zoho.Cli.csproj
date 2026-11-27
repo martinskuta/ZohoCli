@@ -12,7 +12,7 @@
     <PackageId>Zoho.Cli</PackageId>
     <Version>1.0.0</Version>
     <Description>Reads Zoho People leaves and timesheet jobs as JSON.</Description>
-    <RepositoryUrl>https://github.com/martinskuta/zohocli</RepositoryUrl>
+    <RepositoryUrl>https://github.com/martinskuta/ZohoCli</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
