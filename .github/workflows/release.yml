@@ -16,12 +16,12 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -55,7 +55,7 @@ jobs:
           if ($LASTEXITCODE -ne 2) { throw "zoho me without a token should exit 2, not $LASTEXITCODE" }
           exit 0
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Zoho.Cli.${{ steps.version.outputs.version }}
           path: artifacts/*.nupkg
@@ -68,7 +68,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: Zoho.Cli.${{ needs.build.outputs.version }}
           path: artifacts
