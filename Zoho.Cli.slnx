@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Zoho.Cli/Zoho.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zoho.Cli.Tests/Zoho.Cli.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,84 @@
+name: Build and release
+
+# Every push and pull request builds, tests and packs the zoho tool, and uploads the .nupkg as an artifact.
+# Running the workflow by hand on master also publishes it as a GitHub release (v<Major.Minor>.<next patch>).
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Compute the version
+        id: version
+        shell: pwsh
+        run: |
+          # Major.Minor comes from .release-version; the patch is one more than the highest v<Major.Minor>.<patch> tag.
+          $majorMinor = (Get-Content .release-version -Raw).Trim()
+          if ($majorMinor -notmatch '^\d+\.\d+$') { throw ".release-version must hold Major.Minor, such as 1.0" }
+          $patches = @(git tag --list "v$majorMinor.*" | ForEach-Object { $_.Substring("v$majorMinor.".Length) } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+          $patch = if ($patches.Count) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
+          "version=$majorMinor.$patch" >> $env:GITHUB_OUTPUT
+          "Version $majorMinor.$patch"
+
+      - name: Test
+        run: dotnet test -c Release
+
+      - name: Pack
+        run: dotnet pack src/Zoho.Cli -c Release -o artifacts -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Smoke-test the package
+        shell: pwsh
+        run: |
+          # Install the packed tool as a user would, then check it runs and reports "not signed in" on a clean machine.
+          dotnet tool install Zoho.Cli --tool-path tool --source artifacts --version ${{ steps.version.outputs.version }}
+          if ($LASTEXITCODE -ne 0) { throw "dotnet tool install failed" }
+          ./tool/zoho --help
+          if ($LASTEXITCODE -ne 0) { throw "zoho --help exited with $LASTEXITCODE" }
+          ./tool/zoho me
+          if ($LASTEXITCODE -ne 2) { throw "zoho me without a token should exit 2, not $LASTEXITCODE" }
+          exit 0
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Zoho.Cli.${{ steps.version.outputs.version }}
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: Zoho.Cli.${{ needs.build.outputs.version }}
+          path: artifacts
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ needs.build.outputs.version }}" artifacts/*.nupkg \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "v${{ needs.build.outputs.version }}" \
+            --generate-notes --latest
